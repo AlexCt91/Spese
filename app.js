@@ -557,8 +557,9 @@ ${ruleLines ? `Preferenze dell'utente da rispettare (parole della descrizione â†
   if (text) parts.push("TESTO DEI MOVIMENTI:\n" + text);
   for (const f of files) parts.push(await fileToPart(f));
 
-  let lastErr;
-  for (const name of AI_MODELS) {
+  const errors = [];
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for (const name of AI_MODELS) for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const model = getGenerativeModel(ai, {
         model: name,
@@ -577,9 +578,16 @@ ${ruleLines ? `Preferenze dell'utente da rispettare (parole della descrizione â†
           type: tipo, category: tipo === "in" ? "Entrate" : cat, aiCategory: cat
         };
       }).filter(m => m.amount > 0);
-    } catch (e) { lastErr = e; console.warn("Modello", name, "non riuscito:", e); }
+    } catch (e) {
+      console.warn("Modello", name, "non riuscito:", e);
+      const msg = String(e?.message || e);
+      errors.push(`${name}: ${msg.replace(/^.*?\[/, "[")}`);
+      // Sovraccarico o limite momentaneo: riprova lo stesso modello dopo una pausa, poi passa al successivo.
+      if (attempt === 0 && /\[(500|503|429)/.test(msg)) { await sleep(2500); continue; }
+      break;
+    }
   }
-  throw lastErr;
+  throw new Error(errors.join("\n\n"));
 }
 
 function openReview(shared, items) {
@@ -631,7 +639,9 @@ function openReview(shared, items) {
 function showAiError(e) {
   const msg = String(e?.message || e);
   let hint = "Fai uno screenshot di questo messaggio e mandalo a chi ti ha preparato l'app.";
-  if (/403|PERMISSION_DENIED|not been used|disabled|SERVICE_DISABLED|API_DISABLED/i.test(msg))
+  if (/high demand|\[50[03]/i.test(msg) && !/\[(403|404)/.test(msg))
+    hint = "I server di Gemini sono sovraccarichi in questo momento. Riprova tra qualche minuto.";
+  else if (/403|PERMISSION_DENIED|not been used|disabled|SERVICE_DISABLED|API_DISABLED/i.test(msg))
     hint = "Sembra che Firebase AI Logic (Gemini Developer API) non sia ancora attivo: console Firebase â†’ AI Logic â†’ Inizia â†’ Gemini Developer API.";
   else if (/429|RESOURCE_EXHAUSTED|quota/i.test(msg))
     hint = "Limite gratuito raggiunto per ora: riprova tra qualche minuto.";
