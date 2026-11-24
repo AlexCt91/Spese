@@ -12,7 +12,7 @@ export const firebaseConfig = {
 // regole di sicurezza di Firestore (firestore.rules), che sono private.
 
 // Modelli Gemini da provare in ordine (se il primo non è disponibile si passa al successivo).
-export const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
+export const AI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
 
 export const DEFAULT_PERSONAL_CATEGORIES = [
   "Spesa alimentare", "Ristoranti e bar", "Carburante e trasporti",

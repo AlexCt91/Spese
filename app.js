@@ -502,8 +502,8 @@ function openImport(kind) {
         openReview(shared, items);
       } catch (e) {
         console.error(e);
-        toast("Errore AI: " + (e.message || e).slice(0, 120), 5000);
         b.disabled = false; b.textContent = "Analizza";
+        showAiError(e);
       }
     }
   });
@@ -626,4 +626,18 @@ function openReview(shared, items) {
     saveBtn.textContent = `Salva ${items.filter(x => x.on).length} voci`;
   });
   sh.querySelectorAll("select[data-c]").forEach(s => s.onchange = () => { items[+s.dataset.c].category = s.value; });
+}
+
+function showAiError(e) {
+  const msg = String(e?.message || e);
+  let hint = "Fai uno screenshot di questo messaggio e mandalo a chi ti ha preparato l'app.";
+  if (/403|PERMISSION_DENIED|not been used|disabled|SERVICE_DISABLED|API_DISABLED/i.test(msg))
+    hint = "Sembra che Firebase AI Logic (Gemini Developer API) non sia ancora attivo: console Firebase → AI Logic → Inizia → Gemini Developer API.";
+  else if (/429|RESOURCE_EXHAUSTED|quota/i.test(msg))
+    hint = "Limite gratuito raggiunto per ora: riprova tra qualche minuto.";
+  else if (/404|not found/i.test(msg))
+    hint = "Il modello AI indicato non è disponibile: va aggiornato in config.js.";
+  openSheet(`<h3>Errore AI</h3><p>${esc(hint)}</p>
+    <div class="field"><label>Dettagli</label><textarea readonly style="min-height:180px;font-size:13px">${esc(msg)}</textarea></div>
+    <button class="btn" style="width:100%" data-x="close">Chiudi</button>`);
 }
